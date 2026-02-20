@@ -19,25 +19,25 @@
 e:\B正大杯\
 ├── 研究框架.md              # 研究理论框架与假设
 ├── 方法与模型.md            # 分析方法与技术路线
-├── 方法框架设计_v4_最终版.md  # 方法框架最终版
-├── 所需数据.md              # 数据需求与质量要求
-├── 完整版问卷.md            # 调研问卷v6.1（33题）
+├── 方法框架设计_v5_问卷适配版.md  # 方法框架v5.0（TTF/SI/PV框架）
+├── 所需数据.md              # 数据需求与质量要求v4.0
+├── 完整版问卷.md            # 调研问卷v7.1（22题）
 ├── 团队分工清单.md          # 8天工作安排
 ├── 数据分析负责人操作指南.md  # TRAE操作指南
 ├── data/                   # 原始数据目录
-│   └── 金融经济领域 RPA 需求与技术.xlsx
-├── analysis_data/          # 分析数据目录
-│   ├── AHP两两比较数据.xlsx
-│   ├── DEMATEL专家评分矩阵.xlsx
-│   ├── 政策时间线数据.xlsx
-│   ├── 模拟问卷数据.xlsx
-│   └── 痛点文本数据.xlsx
-├── analysis/               # 分析脚本目录
-│   ├── RQ1_painpoint_analysis.py    # 痛点识别分析
-│   ├── RQ2_causal_analysis.py       # 因果关系分析
-│   ├── RQ3_decision_analysis.py     # 决策分析
-│   ├── RQ4_trend_analysis.py        # 趋势预测分析
-│   └── triangulation.py             # 三角验证
+├── dataexample/            # 分析数据目录（含时间序列）
+│   ├── survey_data_simulated.csv    # 模拟问卷数据（500条）
+│   ├── tech_timeline.csv            # 技术发展时间线（65条）
+│   ├── policy_timeline.csv          # 政策发展时间线（26条）
+│   ├── 金融经济领域 RPA 需求与技术.xlsx  # 业务需求原始数据
+│   ├── 政策数据version2.xlsx        # 政策文献原始数据
+│   └── 人才端补充数据.xlsx          # 人才岗位数据
+├── scripts/                # 数据生成脚本目录
+│   ├── generate_survey_data.py      # 问卷模拟数据生成
+│   └── generate_timeline_data.py    # 时间线数据生成
+├── .trae/skills/           # Trae AI Skills目录
+│   ├── data-description/   # 数据结构描述skill
+│   └── research-guidance/  # 调研指导skill
 ├── results/                # 结果输出目录
 └── README.md               # 项目说明文档
 ```
@@ -46,10 +46,10 @@ e:\B正大杯\
 
 | 研究问题 | 分析方法 | 数据来源 |
 |----------|----------|----------|
-| RQ1：核心痛点识别 | TF-IDF、KMeans、情感分析 | Q6痛点评估、痛点文本数据 |
-| RQ2：痛点因果关系 | 模糊DEMATEL-ISM、SEM、贝叶斯网络 | Q7 DEMATEL矩阵、Q9-Q23 SEM题项 |
-| RQ3：需求优先级决策 | 模糊AHP、TOPSIS+VIKOR | Q24 TOPSIS评分、Q25 AHP比较 |
-| RQ4：未来趋势预测 | 技术路线图、德尔菲法、情景分析 | Q28-Q35、政策时间线数据 |
+| RQ1：核心痛点识别 | TF-IDF、KMeans、情感分析 | Q6痛点评估、Q21痛点开放题 |
+| RQ2：痛点因果关系 | 模糊DEMATEL-ISM、SEM、贝叶斯网络 | Q7 DEMATEL矩阵(6×6)、Q9-Q12 SEM题项、Q17效果评估 |
+| RQ3：需求优先级决策 | 模糊AHP、TOPSIS | Q14 TOPSIS评分、Q15 AHP比较 |
+| RQ4：未来趋势预测 | 德尔菲法、文本分析 | Q19技术预期、Q22需求开放题 |
 
 ## 方法三角验证
 
@@ -61,10 +61,10 @@ e:\B正大杯\
 │    定量方法          定性方法          混合方法   │
 │       │                │                 │      │
 │       ▼                ▼                 ▼      │
-│   问卷调查         痛点文本分析      模糊DEMATEL  │
-│   SEM结构方程      情感分析          模糊AHP      │
-│   TOPSIS+VIKOR     TF-IDF聚类        贝叶斯网络   │
-│                    KMeans主题        三角验证     │
+│   问卷调查         开放题文本分析     模糊DEMATEL  │
+│   SEM结构方程      TF-IDF聚类        模糊AHP      │
+│   TOPSIS          主题建模          贝叶斯网络   │
+│   (TTF/SI/PV)      (Q21/Q22)         三角验证     │
 │                                                 │
 │              ↓ 交叉验证 ↓                       │
 │                                                 │
@@ -138,25 +138,28 @@ pip install scipy scikit-learn
 
 ## 关键产出
 
-- 痛点因果四象限图（DEMATEL结果）
+- 痛点因果四象限图（DEMATEL 6×6矩阵结果）
 - 痛点递阶层次结构图（ISM分层）
-- 需求影响因素路径图（SEM路径）
+- 需求影响因素路径图（SEM TTF/SI/PV路径）
 - 技术成熟度评估矩阵（模糊AHP）
 - 方案选型决策雷达图（TOPSIS）
 - RPA技术演进路线图（含AI+RPA融合）
+- 贝叶斯网络验证图（Q17离散化变量）
 
 ## 文档版本
 
-- 研究框架.md：v2.0
-- 方法与模型.md：v2.1
-- 方法框架设计_v4_最终版.md：v4.0
-- 所需数据.md：v2.0
-- 团队分工清单.md：v4.0
-- 完整版问卷.md：v6.1（33题，对齐方法框架v4）
-- 数据分析负责人操作指南.md：v1.0
+| 文档名称 | 版本 | 说明 |
+|----------|------|------|
+| 研究框架.md | v2.0 | 研究理论框架与假设 |
+| 方法与模型.md | v2.1 | 分析方法与技术路线 |
+| 方法框架设计_v5_问卷适配版.md | v5.0 | TTF/SI/PV框架，适配问卷v7.1 |
+| 所需数据.md | v4.0 | 同步问卷v7.1设计 |
+| 团队分工清单.md | v4.0 | 8天工作安排 |
+| 完整版问卷.md | v7.1 | 22题，TTF/SI/PV框架+DEMATEL 6×6+开放题 |
+| 数据分析负责人操作指南.md | v1.0 | TRAE操作指南 |
 
 ---
 
 *项目创建日期：2026-02-16*
-*最后更新：2026-02-19*
+*最后更新：2026-02-20*
 *比赛名称：正大杯全国大学生市场调查分析大赛*
