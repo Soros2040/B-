@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器
-版本: v1.0
+版本: v2.0
 生成份数: 500份
 输出格式: CSV
+修复: Q12_RD(风险感知)和Q13_RV(收益感知)变量映射错误
 """
 
 import pandas as pd
@@ -96,12 +97,35 @@ SI_ITEMS = ["同行业企业普遍应用RPA，形成示范效应", "金融科技
 PV_ITEMS = ["RPA能显著提升工作效率(效率提升60%以上)", "RPA能有效降低运营成本(成本节约20%+)",
             "RPA能降低业务操作风险(错误率降至0.5%以下)", "RPA能提升合规水平，满足监管要求"]
 
+RD_ITEMS = [
+    "担心RPA技术不够成熟稳定，可能影响业务连续性",
+    "担心数据安全和隐私泄露风险",
+    "担心RPA应用可能带来合规风险",
+    "担心RPA实施成本过高，ROI不明确",
+    "担心RPA人才短缺，维护困难",
+    "担心RPA实施过程影响现有业务运营",
+    "担心RPA脚本维护成本持续增加",
+    "担心RPA与现有系统集成困难"
+]
+
+RV_ITEMS = [
+    "RPA能显著提升工作效率",
+    "RPA能有效降低运营成本",
+    "RPA能提升工作质量",
+    "RPA能增强企业竞争力",
+    "RPA能促进业务创新",
+    "RPA能提升合规水平"
+]
+
+BI_ITEMS = [
+    "未来愿意继续扩大RPA应用规模",
+    "愿意向同行推荐RPA解决方案",
+    "愿意增加RPA相关投资预算",
+    "愿意参与RPA相关培训和推广"
+]
+
 RPA_DEMANDS = ["效率提升类", "风险管控类", "成本控制类", "数据处理类", 
                "业务自动化类", "体验优化类", "信创国产化", "AI智能增强"]
-
-REVERSE_ITEMS = ["RPA技术目前无法有效解决贵机构核心业务问题", "贵机构对RPA应用没有迫切需求",
-                 "RPA实施成本远高于预期收益", "RPA稳定性差，无法满足业务连续性要求",
-                 "RPA与现有系统集成困难，实施阻力大", "RPA人才短缺严重制约了应用推广"]
 
 TECH_SOLUTIONS = [
     "LLM+RAG", "金融垂直大模型(Fin-LLM)", "多模态AI", "NLP自然语言处理", "OCR智能文档处理",
@@ -290,7 +314,9 @@ def generate_dataset():
     ttf_base = 2.5 + 0.3 * tech_cap + 0.2 * org_digital
     si_base = 2.8 + 0.15 * org_digital
     pv_base = 2.6 + 0.25 * tech_cap + 0.2 * rpa_exp
-    demand_base = 2.8 + 0.2 * ttf_base + 0.15 * si_base + 0.2 * pv_base
+    rd_base = 3.5 - 0.1 * tech_cap + 0.15 * (5 - org_digital)
+    rv_base = 2.8 + 0.2 * tech_cap + 0.15 * rpa_exp
+    bi_base = 2.5 + 0.3 * pv_base - 0.15 * rd_base + 0.1 * ttf_base
     
     data = []
     
@@ -343,51 +369,55 @@ def generate_dataset():
         for j, item in enumerate(PV_ITEMS):
             record[f'Q11_PV{j+1}'] = q11_scores[0, j]
         
-        q12_scores = generate_likert_with_base(np.array([demand_base[i]]), len(RPA_DEMANDS))
-        for j, item in enumerate(RPA_DEMANDS):
+        q12_scores = generate_likert_with_base(np.array([rd_base[i]]), len(RD_ITEMS))
+        for j, item in enumerate(RD_ITEMS):
             record[f'Q12_RD{j+1}'] = q12_scores[0, j]
         
-        reverse_base = 5 - demand_base[i]
-        q13_scores = generate_likert_with_base(np.array([reverse_base]), len(REVERSE_ITEMS), noise=0.8)
-        for j, item in enumerate(REVERSE_ITEMS):
+        q13_scores = generate_likert_with_base(np.array([rv_base[i]]), len(RV_ITEMS))
+        for j, item in enumerate(RV_ITEMS):
             record[f'Q13_RV{j+1}'] = q13_scores[0, j]
         
-        q14_fuzzy = generate_q14_fuzzy()
-        for j, item in enumerate(TECH_SOLUTIONS):
-            low, mid, high = q14_fuzzy[item]
-            record[f'Q14_{j+1}_low'] = low
-            record[f'Q14_{j+1}_mid'] = mid
-            record[f'Q14_{j+1}_high'] = high
+        q14_scores = generate_likert_with_base(np.array([bi_base[i]]), len(BI_ITEMS))
+        for j, item in enumerate(BI_ITEMS):
+            record[f'Q14_BI{j+1}'] = q14_scores[0, j]
         
-        q15_comparisons = generate_q15_ahp()
-        for j, (a, a_val, b_val, b) in enumerate(q15_comparisons):
-            record[f'Q15_{j+1}_A'] = a
-            record[f'Q15_{j+1}_A_val'] = a_val
-            record[f'Q15_{j+1}_B_val'] = b_val
-            record[f'Q15_{j+1}_B'] = b
+        q15_fuzzy = generate_q14_fuzzy()
+        tech_solutions = list(TECH_SOLUTIONS)
+        for j, item in enumerate(tech_solutions):
+            low, mid, high = q15_fuzzy[item]
+            record[f'Q15_{j+1}_low'] = low
+            record[f'Q15_{j+1}_mid'] = mid
+            record[f'Q15_{j+1}_high'] = high
         
-        record['Q16_scenarios'] = generate_q16_scenarios()
+        q16_comparisons = generate_q15_ahp()
+        for j, (a, a_val, b_val, b) in enumerate(q16_comparisons):
+            record[f'Q16_{j+1}_A'] = a
+            record[f'Q16_{j+1}_A_val'] = a_val
+            record[f'Q16_{j+1}_B_val'] = b_val
+            record[f'Q16_{j+1}_B'] = b
         
-        q17 = generate_q17_discrete()
-        record['Q17_efficiency'] = q17[0]
-        record['Q17_cost_save'] = q17[1]
-        record['Q17_error_reduce'] = q17[2]
-        record['Q17_satisfaction'] = q17[3]
-        record['Q17_compliance'] = q17[4]
-        record['Q17_roi'] = q17[5]
+        record['Q17_scenarios'] = generate_q16_scenarios()
         
-        q18_scores = generate_likert_with_base(np.array([si_base[i]]), len(POLICY_ITEMS))
+        q18 = generate_q17_discrete()
+        record['Q18_efficiency'] = q18[0]
+        record['Q18_cost_save'] = q18[1]
+        record['Q18_error_reduce'] = q18[2]
+        record['Q18_satisfaction'] = q18[3]
+        record['Q18_compliance'] = q18[4]
+        record['Q18_roi'] = q18[5]
+        
+        q19_scores = generate_likert_with_base(np.array([si_base[i]]), len(POLICY_ITEMS))
         for j, item in enumerate(POLICY_ITEMS):
-            record[f'Q18_{j+1}'] = q18_scores[0, j]
+            record[f'Q19_{j+1}'] = q19_scores[0, j]
         
         n_trends = np.random.randint(3, 8)
-        record['Q19_trends'] = "|".join(np.random.choice(FUTURE_TRENDS, n_trends, replace=False))
+        record['Q20_trends'] = "|".join(np.random.choice(FUTURE_TRENDS, n_trends, replace=False))
         
         n_talents = np.random.randint(3, 7)
-        record['Q20_talents'] = "|".join(np.random.choice(TALENT_NEEDS, n_talents, replace=False))
+        record['Q21_talents'] = "|".join(np.random.choice(TALENT_NEEDS, n_talents, replace=False))
         
-        record['Q21_pain_point_text'] = generate_open_text(PAIN_POINT_TEMPLATES)
-        record['Q22_demand_text'] = generate_open_text(DEMAND_TEMPLATES)
+        record['Q22_pain_point_text'] = generate_open_text(PAIN_POINT_TEMPLATES)
+        record['Q23_demand_text'] = generate_open_text(DEMAND_TEMPLATES)
         
         data.append(record)
     
@@ -395,7 +425,7 @@ def generate_dataset():
 
 def main():
     print("=" * 60)
-    print("RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器")
+    print("RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器 v2.0")
     print("=" * 60)
     print(f"生成份数: {N_SAMPLES}")
     print(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -403,7 +433,7 @@ def main():
     
     df = generate_dataset()
     
-    output_dir = "e:\\B正大杯\\data"
+    output_dir = "e:\\B正大杯\\dataexample"
     os.makedirs(output_dir, exist_ok=True)
     
     output_file = os.path.join(output_dir, "survey_data_simulated.csv")
@@ -416,13 +446,13 @@ def main():
     print(f"  - 总变量数: {len(df.columns)}")
     print(f"  - 数据完整性: {df.isnull().sum().sum()} 个缺失值")
     print("-" * 60)
-    print("变量分布统计:")
-    print(f"  - Q1 行业分布: {df['Q1_industry'].value_counts().to_dict()}")
-    print(f"  - Q2 数字化转型阶段: {df['Q2_digital_stage'].value_counts().to_dict()}")
-    print(f"  - Q9 TTF均值: {df[[c for c in df.columns if c.startswith('Q9_')]].mean().mean():.2f}")
-    print(f"  - Q10 SI均值: {df[[c for c in df.columns if c.startswith('Q10_')]].mean().mean():.2f}")
-    print(f"  - Q11 PV均值: {df[[c for c in df.columns if c.startswith('Q11_')]].mean().mean():.2f}")
-    print(f"  - Q12 RD均值: {df[[c for c in df.columns if c.startswith('Q12_')]].mean().mean():.2f}")
+    print("SEM核心变量统计:")
+    print(f"  - Q9 TTF均值: {df[[c for c in df.columns if c.startswith('Q9_TTF')]].mean().mean():.2f}")
+    print(f"  - Q10 SI均值: {df[[c for c in df.columns if c.startswith('Q10_SI')]].mean().mean():.2f}")
+    print(f"  - Q11 PV均值: {df[[c for c in df.columns if c.startswith('Q11_PV')]].mean().mean():.2f}")
+    print(f"  - Q12 RD均值: {df[[c for c in df.columns if c.startswith('Q12_RD')]].mean().mean():.2f}")
+    print(f"  - Q13 RV均值: {df[[c for c in df.columns if c.startswith('Q13_RV')]].mean().mean():.2f}")
+    print(f"  - Q14 BI均值: {df[[c for c in df.columns if c.startswith('Q14_BI')]].mean().mean():.2f}")
     print("=" * 60)
     print("模拟数据生成完成！")
 
