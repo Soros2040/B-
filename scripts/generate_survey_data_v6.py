@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器
-版本: v4.0
+版本: v6.0 (最终版)
 生成份数: 500份
 输出格式: CSV
-修复: 直接控制题项间相关性，确保信效度达标
+确保: 1. 题项间高相关性(信效度) 2. 潜变量间因果关系(SEM假设)
 """
 
 import pandas as pd
@@ -124,9 +124,6 @@ BI_ITEMS = [
     "愿意参与RPA相关培训和推广"
 ]
 
-RPA_DEMANDS = ["效率提升类", "风险管控类", "成本控制类", "数据处理类", 
-               "业务自动化类", "体验优化类", "信创国产化", "AI智能增强"]
-
 TECH_SOLUTIONS = [
     "LLM+RAG", "金融垂直大模型(Fin-LLM)", "多模态AI", "NLP自然语言处理", "OCR智能文档处理",
     "智能风控模型", "AI机器翻译",
@@ -197,14 +194,35 @@ DEMAND_TEMPLATES = [
     "期待RPA在监管合规领域发挥更大作用。希望RPA能够支持穿透式监管、实时合规监控等场景，帮助金融机构更好地满足监管要求。同时期望监管机构能够出台RPA应用指导规范，降低合规风险。"
 ]
 
-def generate_base_latent_scores(n):
-    tech_capability = np.random.normal(3.5, 0.8, n)
-    tech_capability = np.clip(tech_capability, 1, 5)
+def generate_scale_items_high_reliability(latent_mean, n_items, target_alpha=0.82):
+    """
+    生成高信度的量表数据
+    通过控制共同方差比例来确保题项间高相关性
     
-    org_digital_level = np.random.choice([1, 2, 3, 4], n, p=[0.15, 0.35, 0.35, 0.15])
-    rpa_experience = np.random.choice([1, 2, 3, 4], n, p=[0.20, 0.35, 0.30, 0.15])
+    参数:
+    - latent_mean: 潜在变量的均值
+    - n_items: 题项数量
+    - target_alpha: 目标Cronbach's Alpha值
+    """
+    n_samples = N_SAMPLES
     
-    return tech_capability, org_digital_level, rpa_experience
+    avg_corr = target_alpha / (n_items - target_alpha * (n_items - 1) + target_alpha)
+    
+    common_ratio = min(0.7, avg_corr + 0.2)
+    
+    latent = np.random.normal(latent_mean, 0.6, n_samples)
+    latent = np.clip(latent, 1.5, 4.5)
+    
+    items = np.zeros((n_samples, n_items))
+    
+    for i in range(n_items):
+        common = latent * np.sqrt(common_ratio)
+        unique = np.random.normal(0, np.sqrt(1 - common_ratio) * 0.4, n_samples)
+        items[:, i] = common + unique
+    
+    items = np.clip(items, 1, 5)
+    
+    return items.astype(int)
 
 def generate_q1():
     industry = np.random.choice(list(INDUSTRIES.keys()), p=INDUSTRY_WEIGHTS)
@@ -233,37 +251,6 @@ def generate_q4():
     if np.random.random() < 0.10:
         selected.append(np.random.choice(RPA_PRODUCTS["其他"]))
     return "|".join(selected) if selected else "未使用"
-
-def generate_scale_items_direct(latent_mean, n_items, target_alpha=0.8):
-    """
-    直接生成具有目标信度的量表数据
-    通过控制题项间的平均相关性来实现
-    
-    参数:
-    - latent_mean: 潜在变量的均值
-    - n_items: 题项数量
-    - target_alpha: 目标Cronbach's Alpha值
-    """
-    n_samples = N_SAMPLES
-    
-    latent = np.random.normal(latent_mean, 0.8, n_samples)
-    latent = np.clip(latent, 1, 5)
-    
-    avg_corr = target_alpha / (n_items - target_alpha * (n_items - 1) + target_alpha)
-    
-    items = np.zeros((n_samples, n_items))
-    
-    common_var = 0.6
-    unique_var = 1 - common_var
-    
-    for i in range(n_items):
-        common = latent * np.sqrt(common_var)
-        unique = np.random.normal(0, np.sqrt(unique_var * 0.5), n_samples)
-        items[:, i] = common + unique
-    
-    items = np.clip(items, 1, 5)
-    
-    return items.astype(int)
 
 def generate_q7_dematel():
     matrix = np.zeros((6, 6), dtype=int)
@@ -336,14 +323,42 @@ def generate_open_text(templates, min_len=100):
     return base
 
 def generate_dataset():
-    tech_cap, org_digital, rpa_exp = generate_base_latent_scores(N_SAMPLES)
+    """
+    生成数据集，同时确保：
+    1. 题项间高相关性（信效度达标）
+    2. 潜变量间因果关系（SEM假设可验证）
     
-    ttf_items = generate_scale_items_direct(3.5, 4, target_alpha=0.82)
-    si_items = generate_scale_items_direct(2.7, 4, target_alpha=0.78)
-    pv_items = generate_scale_items_direct(3.4, 4, target_alpha=0.80)
-    rd_items = generate_scale_items_direct(3.0, 8, target_alpha=0.85)
-    rv_items = generate_scale_items_direct(3.4, 6, target_alpha=0.82)
-    bi_items = generate_scale_items_direct(3.0, 4, target_alpha=0.80)
+    研究假设模型:
+    H1: TTF → PV (正向)
+    H2: SI → PV (正向)
+    H3: PV → BI (正向)
+    H4: RD → BI (负向)
+    """
+    
+    ttf_base = np.random.normal(3.5, 0.6, N_SAMPLES)
+    ttf_base = np.clip(ttf_base, 1.5, 4.5)
+    
+    si_base = np.random.normal(3.2, 0.5, N_SAMPLES)
+    si_base = np.clip(si_base, 1.5, 4.5)
+    
+    rd_base = np.random.normal(3.0, 0.5, N_SAMPLES)
+    rd_base = np.clip(rd_base, 1.5, 4.5)
+    
+    pv_base = 1.2 + 0.35 * ttf_base + 0.25 * si_base + np.random.normal(0, 0.35, N_SAMPLES)
+    pv_base = np.clip(pv_base, 1.5, 4.5)
+    
+    rv_base = 0.5 + 0.75 * pv_base + np.random.normal(0, 0.25, N_SAMPLES)
+    rv_base = np.clip(rv_base, 1.5, 4.5)
+    
+    bi_base = 1.0 + 0.40 * pv_base - 0.20 * rd_base + 0.15 * rv_base + np.random.normal(0, 0.35, N_SAMPLES)
+    bi_base = np.clip(bi_base, 1.5, 4.5)
+    
+    ttf_items = generate_scale_items_high_reliability_from_base(ttf_base, 4, target_alpha=0.82)
+    si_items = generate_scale_items_high_reliability_from_base(si_base, 4, target_alpha=0.80)
+    pv_items = generate_scale_items_high_reliability_from_base(pv_base, 4, target_alpha=0.82)
+    rd_items = generate_scale_items_high_reliability_from_base(rd_base, 8, target_alpha=0.85)
+    rv_items = generate_scale_items_high_reliability_from_base(rv_base, 6, target_alpha=0.82)
+    bi_items = generate_scale_items_high_reliability_from_base(bi_base, 4, target_alpha=0.80)
     
     data = []
     
@@ -366,13 +381,13 @@ def generate_dataset():
         record['Q3_eco_role'] = np.random.choice(ECO_ROLES, p=ECO_ROLE_WEIGHTS)
         record['Q4_products'] = generate_q4()
         
-        q5_items = generate_scale_items_direct(tech_cap[i], len(TECH_MATURITY_ITEMS), target_alpha=0.75)
+        tech_items = generate_scale_items_high_reliability(3.3, len(TECH_MATURITY_ITEMS), target_alpha=0.75)
         for j, item in enumerate(TECH_MATURITY_ITEMS):
-            record[f'Q5_{j+1}'] = q5_items[i, j]
+            record[f'Q5_{j+1}'] = tech_items[i, j]
         
-        q6_items = generate_scale_items_direct(4 - tech_cap[i], len(PAIN_POINTS), target_alpha=0.70)
+        pain_items = generate_scale_items_high_reliability(2.8, len(PAIN_POINTS), target_alpha=0.70)
         for j, item in enumerate(PAIN_POINTS):
-            record[f'Q6_{j+1}'] = q6_items[i, j]
+            record[f'Q6_{j+1}'] = pain_items[i, j]
         
         q7_matrix = generate_q7_dematel()
         for row in range(6):
@@ -427,7 +442,7 @@ def generate_dataset():
         record['Q18_compliance'] = q18[4]
         record['Q18_roi'] = q18[5]
         
-        policy_items = generate_scale_items_direct(2.8, len(POLICY_ITEMS), target_alpha=0.78)
+        policy_items = generate_scale_items_high_reliability(3.0, len(POLICY_ITEMS), target_alpha=0.78)
         for j, item in enumerate(POLICY_ITEMS):
             record[f'Q19_{j+1}'] = policy_items[i, j]
         
@@ -444,14 +459,41 @@ def generate_dataset():
     
     return pd.DataFrame(data)
 
+def generate_scale_items_high_reliability_from_base(latent_base, n_items, target_alpha=0.82):
+    """
+    从给定的潜变量基线生成高信度的量表数据
+    """
+    n_samples = len(latent_base)
+    
+    avg_corr = target_alpha / (n_items - target_alpha * (n_items - 1) + target_alpha)
+    common_ratio = min(0.7, avg_corr + 0.2)
+    
+    items = np.zeros((n_samples, n_items))
+    
+    for i in range(n_items):
+        common = latent_base * np.sqrt(common_ratio)
+        unique = np.random.normal(0, np.sqrt(1 - common_ratio) * 0.4, n_samples)
+        items[:, i] = common + unique
+    
+    items = np.clip(items, 1, 5)
+    
+    return items.astype(int)
+
 def main():
     print("=" * 60)
-    print("RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器 v4.0")
+    print("RPA技术在金融经济领域应用需求调研问卷 - 模拟数据生成器 v6.0")
     print("=" * 60)
     print(f"生成份数: {N_SAMPLES}")
     print(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-" * 60)
-    print("修复说明: 直接控制题项间相关性，确保信效度达标")
+    print("确保: 1. 题项间高相关性(信效度达标)")
+    print("      2. 潜变量间因果关系(SEM假设可验证)")
+    print("-" * 60)
+    print("因果关系模型:")
+    print("  H1: TTF → PV (β=0.35)")
+    print("  H2: SI → PV (β=0.25)")
+    print("  H3: PV → BI (β=0.40)")
+    print("  H4: RD → BI (β=-0.20)")
     print("-" * 60)
     
     df = generate_dataset()
@@ -477,7 +519,10 @@ def main():
     print(f"  - Q13 RV均值: {df[[c for c in df.columns if c.startswith('Q13_RV')]].mean().mean():.2f}")
     print(f"  - Q14 BI均值: {df[[c for c in df.columns if c.startswith('Q14_BI')]].mean().mean():.2f}")
     print("-" * 60)
-    print("题项间相关性预检:")
+    
+    def calc_composite(df, prefix):
+        cols = [c for c in df.columns if c.startswith(prefix)]
+        return df[cols].mean(axis=1)
     
     def check_internal_consistency(df, cols):
         valid_cols = [c for c in cols if c in df.columns]
@@ -487,12 +532,28 @@ def main():
         upper_tri = corr_matrix.values[np.triu_indices(len(valid_cols), k=1)]
         return np.mean(np.abs(upper_tri))
     
+    print("题项间相关性预检:")
     print(f"  - TTF题项间平均相关: {check_internal_consistency(df, ['Q9_TTF1', 'Q9_TTF2', 'Q9_TTF3', 'Q9_TTF4']):.3f}")
     print(f"  - SI题项间平均相关: {check_internal_consistency(df, ['Q10_SI1', 'Q10_SI2', 'Q10_SI3', 'Q10_SI4']):.3f}")
     print(f"  - PV题项间平均相关: {check_internal_consistency(df, ['Q11_PV1', 'Q11_PV2', 'Q11_PV3', 'Q11_PV4']):.3f}")
     print(f"  - RD题项间平均相关: {check_internal_consistency(df, ['Q12_RD1', 'Q12_RD2', 'Q12_RD3', 'Q12_RD4', 'Q12_RD5', 'Q12_RD6', 'Q12_RD7', 'Q12_RD8']):.3f}")
     print(f"  - RV题项间平均相关: {check_internal_consistency(df, ['Q13_RV1', 'Q13_RV2', 'Q13_RV3', 'Q13_RV4', 'Q13_RV5', 'Q13_RV6']):.3f}")
     print(f"  - BI题项间平均相关: {check_internal_consistency(df, ['Q14_BI1', 'Q14_BI2', 'Q14_BI3', 'Q14_BI4']):.3f}")
+    print("-" * 60)
+    
+    ttf = calc_composite(df, 'Q9_TTF')
+    si = calc_composite(df, 'Q10_SI')
+    pv = calc_composite(df, 'Q11_PV')
+    rd = calc_composite(df, 'Q12_RD')
+    rv = calc_composite(df, 'Q13_RV')
+    bi = calc_composite(df, 'Q14_BI')
+    
+    print("潜变量间相关性预检:")
+    print(f"  - TTF ↔ PV: r = {ttf.corr(pv):.3f}")
+    print(f"  - SI ↔ PV: r = {si.corr(pv):.3f}")
+    print(f"  - PV ↔ BI: r = {pv.corr(bi):.3f}")
+    print(f"  - RD ↔ BI: r = {rd.corr(bi):.3f}")
+    print(f"  - RV ↔ BI: r = {rv.corr(bi):.3f}")
     print("=" * 60)
     print("模拟数据生成完成！")
 
