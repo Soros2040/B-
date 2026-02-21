@@ -33,7 +33,7 @@ description: "描述dataexample文件夹中所有数据文件的结构、字段�
 
 ### 核心字段结构
 
-#### 基础信息 (Q1-Q2)
+#### 基础信息 (Q1-Q3)
 | 字段名 | 说明 | 取值范围 |
 |--------|------|----------|
 | respondent_id | 受访者ID | R0001-R0500 |
@@ -127,10 +127,10 @@ X取值范围: 1-45，覆盖45组技术对比
 | Q18_talent_needs | 人才需求 (多选) |
 
 #### 开放题 (Q19-Q20)
-| 字段 | 说明 |
-|------|------|
-| Q19_pain_points | 应用痛点 (开放文本) |
-| Q20_suggestions | 发展建议 (开放文本) |
+| 字段 | 说明 | 分析方法 |
+|------|------|----------|
+| Q19_pain_points | 应用痛点 (开放文本) | BERT嵌入+KMeans、情感分析 |
+| Q20_suggestions | 发展建议 (开放文本) | 关键词提取、主题分析 |
 
 ---
 
@@ -316,7 +316,7 @@ policy_timeline.csv
 
 ### 3. 文本分析
 - Q19/Q20开放题: 痛点与建议挖掘
-- 使用BERT/BERTopic进行主题建模
+- 使用BERT嵌入+KMeans进行主题建模
 - 情感分析与关键词提取
 
 ### 4. 多方法融合
@@ -332,3 +332,27 @@ policy_timeline.csv
 2. **缺失值处理**: 部分字段存在条件跳转，需按问卷逻辑处理
 3. **编码转换**: 分类变量已编码，分析时需参考编码说明
 4. **时间格式**: 时间字段采用YYYY-MM格式，精确到月，便于时间序列分析
+
+---
+
+## 数据使用快速参考
+
+| 分析任务 | 推荐数据文件 | 核心字段 |
+|----------|--------------|----------|
+| 描述性统计 | survey_data_simulated.csv | Q1-Q3 |
+| 信效度检验 | survey_data_simulated.csv | Q9-Q13 |
+| SEM分析 | survey_data_simulated.csv | Q9-Q13 |
+| 文本分析 | survey_data_simulated.csv | Q19, Q20 |
+| DEMATEL分析 | survey_data_simulated.csv | Q7矩阵 |
+| 模糊AHP | survey_data_simulated.csv | Q15比较数据 |
+| TOPSIS | survey_data_simulated.csv | Q14评估数据 |
+| 技术趋势 | tech_timeline.csv | 全部字段 |
+| 政策分析 | policy_timeline.csv | 全部字段 |
+| 需求分析 | 金融经济领域 RPA 需求与技术.xlsx | 全部字段 |
+| 人才分析 | 人才端补充数据.xlsx | 全部字段 |
+
+---
+
+*文档版本：v2.0*
+*更新日期：2026-02-21*
+*主要更新：增加数据使用快速参考表、优化字段说明*
